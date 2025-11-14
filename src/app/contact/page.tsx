@@ -2,7 +2,7 @@
 
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -12,14 +12,41 @@ export default function ContactPage() {
     subject: '',
     message: ''
   });
+  const formStartTracked = useRef(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Track form submission with Google Ads
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'form_submit', {
+        'event_category': 'Contact Form',
+        'event_label': 'Contact Form Submission',
+        'value': 1
+      });
+      
+      // Track conversion for Google Ads
+      (window as any).gtag('event', 'conversion', {
+        'send_to': 'AW-17724229093',
+        'event_category': 'Contact Form',
+        'event_label': 'Contact Form Submission'
+      });
+    }
+    
     alert('Thank you for your message! We will get back to you soon.');
     setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    // Track form start interaction
+    if (!formStartTracked.current && typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'form_start', {
+        'event_category': 'Contact Form',
+        'event_label': 'Contact Form Started'
+      });
+      formStartTracked.current = true;
+    }
+    
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -68,7 +95,14 @@ export default function ContactPage() {
             {/* Contact Form */}
             <div className="bg-white border-2 border-gray-400 p-8 rounded-lg">
               <h2 className="text-2xl font-bold mb-6 text-gray-800">Send us a Message</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form 
+                id="contact-form"
+                name="contact-form"
+                onSubmit={handleSubmit} 
+                className="space-y-4"
+                data-gtm-form="contact-form"
+                data-gtm-form-name="Contact Form"
+              >
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                     Full Name *
@@ -80,6 +114,7 @@ export default function ContactPage() {
                     required
                     value={formData.name}
                     onChange={handleChange}
+                    autoComplete="name"
                     className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-green-500 focus:outline-none transition-all"
                   />
                 </div>
@@ -94,6 +129,7 @@ export default function ContactPage() {
                     required
                     value={formData.email}
                     onChange={handleChange}
+                    autoComplete="email"
                     className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-green-500 focus:outline-none transition-all"
                   />
                 </div>
@@ -108,6 +144,7 @@ export default function ContactPage() {
                     required
                     value={formData.phone}
                     onChange={handleChange}
+                    autoComplete="tel"
                     className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-green-500 focus:outline-none transition-all"
                   />
                 </div>
@@ -147,6 +184,7 @@ export default function ContactPage() {
                 </div>
                 <button
                   type="submit"
+                  id="contact-form-submit"
                   className="w-full border-2 border-green-600 px-6 py-3 rounded bg-green-600 text-white hover:bg-green-700 transition-all duration-300 cursor-pointer transform hover:scale-105 shadow-md hover:shadow-xl font-semibold"
                 >
                   Send Message
