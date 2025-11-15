@@ -12,29 +12,72 @@ export default function ContactPage() {
     subject: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: 'success' | 'error' | null;
+    message: string;
+  }>({ type: null, message: '' });
   const formStartTracked = useRef(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Track form submission with Google Ads
-    if (typeof window !== 'undefined' && (window as any).gtag) {
-      (window as any).gtag('event', 'form_submit', {
-        'event_category': 'Contact Form',
-        'event_label': 'Contact Form Submission',
-        'value': 1
+    setIsSubmitting(true);
+    setSubmitStatus({ type: null, message: '' });
+
+    try {
+      // Track form submission with Google Ads
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'form_submit', {
+          'event_category': 'Contact Form',
+          'event_label': 'Contact Form Submission',
+          'value': 1
+        });
+        
+        // Track conversion for Google Ads
+        (window as any).gtag('event', 'conversion', {
+          'send_to': 'AW-17724229093',
+          'event_category': 'Contact Form',
+          'event_label': 'Contact Form Submission'
+        });
+      }
+
+      // Submit to API route
+      const response = await fetch('/api/submit-contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
-      
-      // Track conversion for Google Ads
-      (window as any).gtag('event', 'conversion', {
-        'send_to': 'AW-17724229093',
-        'event_category': 'Contact Form',
-        'event_label': 'Contact Form Submission'
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitStatus({
+          type: 'success',
+          message: result.message || 'Thank you for your message! We will get back to you soon.',
+        });
+        // Reset form on success
+        setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      } else {
+        setSubmitStatus({
+          type: 'error',
+          message: result.error || 'Failed to send message. Please try again.',
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setSubmitStatus({
+        type: 'error',
+        message: 'An error occurred. Please try again later.',
       });
+    } finally {
+      setIsSubmitting(false);
+      // Clear status message after 5 seconds
+      setTimeout(() => {
+        setSubmitStatus({ type: null, message: '' });
+      }, 5000);
     }
-    
-    alert('Thank you for your message! We will get back to you soon.');
-    setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -182,12 +225,31 @@ export default function ContactPage() {
                     className="w-full border-2 border-gray-300 rounded-lg px-4 py-2 focus:border-green-500 focus:outline-none transition-all"
                   />
                 </div>
+                
+                {/* Status Messages */}
+                {submitStatus.type && (
+                  <div
+                    className={`p-4 rounded-lg ${
+                      submitStatus.type === 'success'
+                        ? 'bg-green-50 border-2 border-green-500 text-green-800'
+                        : 'bg-red-50 border-2 border-red-500 text-red-800'
+                    }`}
+                  >
+                    <p className="text-sm font-medium">{submitStatus.message}</p>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   id="contact-form-submit"
-                  className="w-full border-2 border-green-600 px-6 py-3 rounded bg-green-600 text-white hover:bg-green-700 transition-all duration-300 cursor-pointer transform hover:scale-105 shadow-md hover:shadow-xl font-semibold"
+                  disabled={isSubmitting}
+                  className={`w-full border-2 border-green-600 px-6 py-3 rounded bg-green-600 text-white transition-all duration-300 transform shadow-md hover:shadow-xl font-semibold ${
+                    isSubmitting
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:bg-green-700 hover:scale-105 cursor-pointer'
+                  }`}
                 >
-                  Send Message
+                  {isSubmitting ? 'Sending...' : 'Send Message'}
                 </button>
               </form>
             </div>
