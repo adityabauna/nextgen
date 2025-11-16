@@ -10,6 +10,11 @@ export default function HomePage() {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [hoveredService, setHoveredService] = useState<number | null>(null);
   const [isApplicationModalOpen, setIsApplicationModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<{
+    type: 'success' | 'error' | null;
+    message: string;
+  }>({ type: null, message: '' });
   const [applicationForm, setApplicationForm] = useState({
     name: '',
     mobile: '',
@@ -18,18 +23,56 @@ export default function HomePage() {
     consent: false,
   });
 
-  const handleApplicationSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleApplicationSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Placeholder submit handling
-    alert('Thanks! Our team will send the application form to your email.');
-    setIsApplicationModalOpen(false);
-    setApplicationForm({
-      name: '',
-      mobile: '',
-      email: '',
-      city: '',
-      consent: false,
-    });
+    setIsSubmitting(true);
+    setSubmitStatus({ type: null, message: '' });
+
+    try {
+      // Submit to API route
+      const response = await fetch('/api/submit-application', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(applicationForm),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSubmitStatus({
+          type: 'success',
+          message: result.message || 'Application submitted successfully! Our team will contact you soon.',
+        });
+        // Reset form on success
+        setApplicationForm({
+          name: '',
+          mobile: '',
+          email: '',
+          city: '',
+          consent: false,
+        });
+        // Close modal after 2 seconds
+        setTimeout(() => {
+          setIsApplicationModalOpen(false);
+          setSubmitStatus({ type: null, message: '' });
+        }, 2000);
+      } else {
+        setSubmitStatus({
+          type: 'error',
+          message: result.error || 'Failed to submit application. Please try again.',
+        });
+      }
+    } catch (error) {
+      console.error('Error submitting application:', error);
+      setSubmitStatus({
+        type: 'error',
+        message: 'An error occurred. Please try again later.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleApplicationChange = (

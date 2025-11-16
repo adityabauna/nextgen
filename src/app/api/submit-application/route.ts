@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { appendToSheet } from '@/lib/googleSheets';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { name, email, phone, subject, message } = body;
+    const { name, mobile, email, city, consent } = body;
 
     // Validation
-    if (!name || !email || !phone || !subject || !message) {
+    if (!name || !mobile || !email || !city) {
       return NextResponse.json(
         { success: false, error: 'All fields are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!consent) {
+      return NextResponse.json(
+        { success: false, error: 'Please accept the terms and conditions' },
         { status: 400 }
       );
     }
@@ -25,44 +31,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sanitize inputs (basic sanitization)
+    // Sanitize inputs
     const sanitizedData = {
       name: name.trim(),
+      mobile: mobile.trim(),
       email: email.trim().toLowerCase(),
-      phone: phone.trim(),
-      subject: subject.trim(),
-      message: message.trim(),
+      city: city.trim(),
+      consent: Boolean(consent),
     };
 
     // Save to database using Prisma
-    await prisma.contact.create({
+    await prisma.application.create({
       data: {
         name: sanitizedData.name,
+        mobile: sanitizedData.mobile,
         email: sanitizedData.email,
-        phone: sanitizedData.phone || null,
-        subject: sanitizedData.subject || null,
-        message: sanitizedData.message,
+        city: sanitizedData.city,
+        consent: sanitizedData.consent,
       },
     });
 
-    // Also save to Google Sheet (for real-time viewing)
-    try {
-      await appendToSheet(sanitizedData);
-    } catch (sheetError) {
-      // Log error but don't fail the request if Google Sheets fails
-      console.error('Failed to save to Google Sheets:', sheetError);
-    }
-
     return NextResponse.json({
       success: true,
-      message: 'Thank you for contacting us! We will get back to you soon.',
+      message: 'Application submitted successfully! Our team will contact you soon.',
     });
   } catch (error: any) {
-    console.error('Error in submit-contact API:', error);
+    console.error('Error in submit-application API:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Failed to submit form. Please try again later.',
+        error: error.message || 'Failed to submit application. Please try again later.',
       },
       { status: 500 }
     );

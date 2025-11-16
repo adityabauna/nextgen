@@ -44,3 +44,6 @@ next-env.d.ts
 # Google Service Account key file (keep secure, never commit!)
 google-service-account.json
 *.service-account.json
+
+# Prisma
+/src/generated/prisma
